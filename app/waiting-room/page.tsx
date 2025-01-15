@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, Form, Container, Row, Col } from "react-bootstrap";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function WaitingRoom() {
   const [username, setUsername] = useState("");
@@ -12,6 +12,7 @@ export default function WaitingRoom() {
   const [selectedVideoDevice, setSelectedVideoDevice] = useState("");
 
   const searchParams = useSearchParams();
+  const router = useRouter();
   const urlUsername = searchParams.get("username");
 
   // Set username from the URL when the component mounts
@@ -47,6 +48,13 @@ export default function WaitingRoom() {
       audioDeviceId: selectedAudioDevice,
       videoDeviceId: selectedVideoDevice,
     });
+
+    // Navigate to the video room page with parameters
+    router.push(
+      `/video-room?username=${encodeURIComponent(username)}&audioDeviceId=${encodeURIComponent(
+        selectedAudioDevice
+      )}&videoDeviceId=${encodeURIComponent(selectedVideoDevice)}`
+    );
   };
 
   return (
@@ -100,6 +108,7 @@ export default function WaitingRoom() {
               variant="primary"
               onClick={handleJoinRoom}
               className="w-100"
+              disabled={!username || !selectedAudioDevice || !selectedVideoDevice} // Disable until all fields are filled
             >
               Join Room
             </Button>
