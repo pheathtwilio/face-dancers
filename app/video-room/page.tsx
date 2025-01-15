@@ -1,138 +1,75 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { connect, Room } from "twilio-video";
-import { useSearchParams } from "next/navigation";
-import { Container, Form, Button, Row, Col } from "react-bootstrap";
+import { useEffect, useState, useRef } from "react"
+import { connect, Room, createLocalTracks } from "twilio-video"
+import { useSearchParams, useRouter } from "next/navigation"
+import { Container, Button } from "react-bootstrap"
 
 export default function VideoRoom() {
-  const searchParams = useSearchParams();
-  const username = searchParams.get("username") || "Guest";
-  const roomName = "defaultRoom";
-  const [room, setRoom] = useState<Room | null>(null);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedVideoDevice, setSelectedVideoDevice] = useState<string | undefined>(undefined);
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string | undefined>(undefined);
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const username = searchParams.get("username") || "Kwisatz Haderach"
+  const roomName = "defaultRoom"
+  const [room, setRoom] = useState<Room | null>(null)
+
+  let audioDeviceIdRef = useRef<string | null>(null)
+  let videoDeviceIdRef = useRef<string | null>(null)
+
+  audioDeviceIdRef.current = searchParams.get("audioDeviceId")
+  videoDeviceIdRef.current = searchParams.get("videoDeviceId")
 
   const joinRoom = async () => {
     try {
+      if (!audioDeviceIdRef.current && !videoDeviceIdRef.current) {
+        throw new Error(`Video Device is ${videoDeviceIdRef.current} and Audio Device is ${audioDeviceIdRef.current}`)
+      }
 
-        const response = await fetch("/api/token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-                { username: username, roomName: roomName }
-            ),
-        })
+      const tracks = await createLocalTracks({ 
+        audio: { deviceId: audioDeviceIdRef.current || undefined },
+        video: { deviceId: videoDeviceIdRef.current || undefined }
+      })
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch Twilio token");
-        }
+      const response = await fetch("/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, roomName: roomName }),
+      })
 
-        const wallet = await response.json()
+      if (!response.ok) {
+        throw new Error("Failed to fetch Twilio token")
+      }
 
-        console.log(wallet.token)
+      const wallet = await response.json()
 
+      // Connect to Twilio Video Room
+      const twilioRoom = await connect(wallet.token, {
+        name: roomName,
+        tracks: tracks,
+      })
 
-        // Connect to Twilio Video Room
-        // const twilioRoom = await connect(token, {
-        //     name: roomName,
-        //     audio: true,
-        //     video: { deviceId: selectedVideoDevice },
-        // });
-
-        // setRoom(twilioRoom);
+      setRoom(twilioRoom)
     } catch (err) {
-    console.error("Failed to connect to Twilio Video:", err);
+      console.error("Failed to connect to Twilio Video:", err)
     }
-}
+  }
 
+  const leaveRoom = () => {
+    if (room) {
+      room.disconnect()
+      setRoom(null)
+      router.push("/waiting-room")
+    }
+  };
 
-  // Enumerate available media devices
   useEffect(() => {
-    // const getDevices = async () => {
-    //   const devices = await navigator.mediaDevices.enumerateDevices();
-    //   const video = devices.filter((device) => device.kind === "videoinput");
-    //   const audio = devices.filter((device) => device.kind === "audioinput");
-    //   setVideoDevices(video);
-    //   setAudioDevices(audio);
-    // };
+    joinRoom();
 
-    // getDevices();
-
-    
- 
-    joinRoom()
-
-  }, []);
-
-
-
-//   useEffect(() => {
-//     const joinRoom = async () => {
-//       try {
-//         const response = await fetch("/api/token", {
-//           method: "POST",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify({ username, roomName }),
-//         });
-
-//         if (!response.ok) {
-//           throw new Error("Failed to fetch Twilio token");
-//         }
-
-//         const { token } = await response.json();
-
-//         console.log("TOKEN ")
-
-//         // Connect to Twilio Video Room
-//         const twilioRoom = await connect(token, {
-//           name: roomName,
-//           audio: true,
-//           video: { deviceId: selectedVideoDevice },
-//         });
-
-//         setRoom(twilioRoom);
-//       } catch (err) {
-//         console.error("Failed to connect to Twilio Video:", err);
-//       }
-//     };
-
-//     if (selectedAudioDevice && selectedVideoDevice) {
-//       joinRoom();
-//     }
-//   }, [username, roomName, selectedAudioDevice, selectedVideoDevice]);
-
-//     try {
-//     const response = await fetch("/api/token", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ username, roomName }),
-//     });
-
-//     if (!response.ok) {
-//       throw new Error("Failed to fetch Twilio token");
-//     }
-
-//     const { token } = await response.json();
-
-//     console.log("TOKEN ")
-
-//     // Connect to Twilio Video Room
-//     const twilioRoom = await connect(token, {
-//       name: roomName,
-//       audio: true,
-//       video: { deviceId: selectedVideoDevice },
-//     });
-
-//     setRoom(twilioRoom);
-//   } catch (err) {
-//     console.error("Failed to connect to Twilio Video:", err);
-//   }
-
-// console.log(username)
-
+    return () => {
+      if (room) {
+        room.disconnect()
+      }
+    }
+  }, [])
 
   return (
     <Container className="mt-4">
@@ -150,6 +87,8 @@ export default function VideoRoom() {
           <p>No other participants yet.</p>
         )}
       </div>
+
+      <Button variant="danger" onClick={leaveRoom}>Leave Room</Button> 
     </Container>
-  );
+  )
 }

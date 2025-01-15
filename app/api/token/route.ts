@@ -3,10 +3,10 @@ import * as Twilio from "twilio"
 
 const { TWILIO_ACCOUNT_SID, TWILIO_API_KEY, TWILIO_API_SECRET } = process.env
 
-export async function GET(req: NextApiRequest, res: NextApiResponse){
+export async function GET(req: Request){
 
     console.error("GET method not allowed when requesting JWT token")
-    return res.status(405).json({ error: "GET method not allowed"})
+    return new Response(JSON.stringify({error: "GET method not allowed"}), {status: 405})
 
 }
 
@@ -25,7 +25,7 @@ export async function POST(req: Request){
         TWILIO_ACCOUNT_SID!,
         TWILIO_API_KEY!,
         TWILIO_API_SECRET!,
-        {identity: username}
+        {identity: (username)}
       )
 
       const videoGrant = new Twilio.jwt.AccessToken.VideoGrant({
