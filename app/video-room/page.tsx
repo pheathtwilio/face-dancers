@@ -5,6 +5,12 @@ import { connect, Room, createLocalTracks } from "twilio-video"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Container, Button } from "react-bootstrap"
 
+import { DeepgramSTTHandler, STTEvent, DeepgramSTTOptions } from "../services/stt"
+import { LLM, LLMEvents } from "../services/llm"
+
+
+const DEEPGRAM_API_KEY = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
+
 export default function VideoRoom() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -29,7 +35,7 @@ export default function VideoRoom() {
         video: { deviceId: videoDeviceIdRef.current || undefined }
       })
 
-      const response = await fetch("/api/token", {
+      const response = await fetch("/api/twilio-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username, roomName: roomName }),
@@ -57,9 +63,44 @@ export default function VideoRoom() {
     if (room) {
       room.disconnect()
       setRoom(null)
-      router.push("/waiting-room")
+      router.push("/?username="+username)
     }
   };
+
+  // TODO, in future replace the audioDeviceIdRef.current and subscribe to the local audio track only
+  // const { transcribedText } = useDeepgramTranscription(
+  //   audioDeviceIdRef.current,
+  //   process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY!,
+  //   { diarize: true, model: "nova-2", smart_format: true }
+  // );
+
+  const deepgramAPIKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
+
+  if(!deepgramAPIKey) throw new Error("API Key for Deepgram is undefined")
+
+  const sttOptions: DeepgramSTTOptions = {
+    apiKey: deepgramAPIKey,
+    config: {
+      language: "en",
+      punctuate: true,
+      interimResults: true,
+      timeslice: 250
+    }
+  }
+  const stt = new DeepgramSTTHandler(sttOptions)
+  if(!audioDeviceIdRef.current) throw new Error("Device ID cannot be undefined")
+  stt.connect(audioDeviceIdRef.current)
+
+  const llmAPIKey = process.env.NEXT_PUBLIC_GROQ_API_KEY
+
+  if(!llmAPIKey) throw new Error("API Key for Grow is undefined")
+
+  const llm = new LLM(llmAPIKey)
+
+  stt.on(STTEvent.TRANSCRIPT, data => {
+    console.log(data) // send to LLM
+    llm.main(data)
+  })
 
   useEffect(() => {
     joinRoom();
@@ -88,7 +129,11 @@ export default function VideoRoom() {
         )}
       </div>
 
+      {/* Display transcribed text */}
+      {/* {transcribedText && <p>{transcribedText}</p>} */}
+
       <Button variant="danger" onClick={leaveRoom}>Leave Room</Button> 
+      
     </Container>
   )
 }
