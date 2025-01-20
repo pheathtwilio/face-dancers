@@ -70,8 +70,8 @@ export default function VideoRoom() {
 
       setRoom(twilioRoom)
       setLocalVideoTrack(null) // Remove the preview video once joined
-    } catch (err) {
-      console.error("Failed to join the room:", err)
+    } catch (e) {
+      console.error("Failed to join the room:", e)
     }
   }
 
@@ -115,12 +115,10 @@ export default function VideoRoom() {
     stt.connect(searchParams.get("audioDeviceId") || "")
 
     const handleTranscription = (data: string) => {
-      console.log("Transcribed Text:", data)
       llm.getCompletion(data) // Send transcribed text to the language model
     }
 
     const handleLLMCompletion = (response: string) => {
-      console.log("LLM Response:", response)
       setTranscribedText(response) // Update the UI with LLM response if necessary
     }
 
