@@ -5,6 +5,7 @@ enum LLMEvents {
   COMPLETION_STARTED = "llm-started",
   COMPLETION_SUCCESS = "llm-success",
   COMPLETION_ERROR = "llm-error",
+  COMPLETION_RESPONSE = "llm-response"
 }
 
 class LLM extends EventEmitter {
@@ -20,13 +21,14 @@ class LLM extends EventEmitter {
         this.groq = new Groq({ apiKey, dangerouslyAllowBrowser: true })
     }
 
-    public main = async (data: string) => {
+    public getCompletion = async (data: string) => {
         const chatCompletion = await this.getGroqChatCompletion(data)
         // Print the completion returned by the LLM.
-        console.log(chatCompletion.choices[0]?.message?.content || "");
+        console.log(LLMEvents.COMPLETION_ERROR + " " + chatCompletion.choices[0]?.message?.content || "");
+        this.emit(LLMEvents.COMPLETION_RESPONSE, chatCompletion.choices[0]?.message?.content)
     }
 
-    public getGroqChatCompletion = async (data: string) => {
+    private getGroqChatCompletion = async (data: string) => {
     return this.groq.chat.completions.create({
         messages: [
         {

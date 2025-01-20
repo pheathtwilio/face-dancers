@@ -16,6 +16,7 @@ enum STTEvent {
     CLOSED = 'stt-closed',
     DISCONNECTED = 'stt-disconnected',
     ERROR = 'stt-error',
+    INTERIM = 'stt-interim',
     SENDING = 'stt-sending',
     TRANSCRIPT = 'stt-transcript',
 }
@@ -29,7 +30,7 @@ class DeepgramSTTHandler extends EventEmitter {
   constructor(private options: DeepgramSTTOptions) {
     super();
     if (!options.apiKey) {
-      throw new Error('Deepgram API key is required.');
+      throw new Error(STTEvent.ERROR+ ' Deepgram API key is required.');
     }
 
     this.deepgram = createClient(options.apiKey)
@@ -39,10 +40,10 @@ class DeepgramSTTHandler extends EventEmitter {
  * Connects to the Deepgram streaming endpoint.
  * @param audioDeviceId - An audio device ID
  */
-public async connect(audioDeviceId: string): Promise<void> {
+public async connect(audioDeviceId: string): Promise<DeepgramSTTHandler> {
 
     // get the audiodevice media recorder object
-    if(!audioDeviceId) throw new Error("STT Service -> No Audio Device Id")
+    if(!audioDeviceId) throw new Error(STTEvent.ERROR + " No Audio Device Id")
 
     const constraints = {
         audio: { deviceId: audioDeviceId }
@@ -50,43 +51,70 @@ public async connect(audioDeviceId: string): Promise<void> {
 
     this.audioStream = await navigator.mediaDevices.getUserMedia(constraints)
 
-    if(!this.audioStream) throw new Error("STT Service -> No Audio Stream Created")
+    if(!this.audioStream) throw new Error(STTEvent.ERROR + " No Audio Stream Created")
 
     this.audioRecorder = new MediaRecorder(this.audioStream)
 
-    if(!this.audioRecorder) throw new Error("STT Service -> No Audio Recorder Created")
+    if(!this.audioRecorder) throw new Error(STTEvent.ERROR + " No Audio Recorder Created")
 
     try {
         this.connection = await this.deepgram?.listen.live(this.options.config)
 
         if(!this.connection){
-            throw new Error("STT Service -> No Deepgram connection created")
+            throw new Error(STTEvent.ERROR + " No Deepgram connection created")
         }
 
         this.connection?.on(LiveTranscriptionEvents.Open, () => {
             this.emit(STTEvent.CONNECTED)
+            console.log(STTEvent.CONNECTED)
             this.audioRecorder?.start(this.options.config.timeslice) // TODO create a shared constant that can be set in config
             
             if(this.audioRecorder){
                 this.audioRecorder.ondataavailable = e => {
                     this.emit(STTEvent.SENDING)
+                    console.log(STTEvent.SENDING)
                     this.connection?.send(e.data)
                 }   
             }
 
         })
 
+        let is_finals:string[] = []
+
         this.connection?.on(LiveTranscriptionEvents.Transcript, (data) => {
+
+          const sentence = data.channel.alternatives[0].transcript
+
+          if(sentence.length == 0) return // ignore empty transcripts
+
+          if(data.is_final){
+            //  concatenate the pieces
+            is_finals.push(sentence)
+
             if(data.speech_final){
-                this.emit(STTEvent.TRANSCRIPT, data.channel.alternatives[0].transcript)
+
+              const utterance = is_finals.join(" ")
+              is_finals = []
+              this.emit(STTEvent.TRANSCRIPT, utterance)
+              console.log(STTEvent.TRANSCRIPT, utterance)
+            }else{
+              console.log(STTEvent.INTERIM, sentence) // good for real-time captioning
             }
+
+          }else{
+            console.log(STTEvent.INTERIM, sentence) // good for real-time captioning
+          }
+
+            
         })
 
-        this.connection?.on(LiveTranscriptionEvents.Close, () => {this.emit(STTEvent.CLOSED); console.log("STT Service -> Deepgram connection closed")})
+        this.connection?.on(LiveTranscriptionEvents.Close, () => {this.emit(STTEvent.CLOSED); this.connection?.disconnect(); console.log(STTEvent.CLOSED + " Deepgram connection closed")})
 
-        this.connection?.on(LiveTranscriptionEvents.Error, (e) => {this.emit(STTEvent.ERROR); console.error(e)})
+        this.connection?.on(LiveTranscriptionEvents.Error, (e) => {this.emit(STTEvent.ERROR); this.connection?.disconnect(); console.error(e)})
 
     }catch(e){console.error(e)}
+
+    return this
 
 }
 
@@ -97,6 +125,7 @@ public async connect(audioDeviceId: string): Promise<void> {
     if (this.connection) {
         this.connection.disconnect()
         this.connection = undefined
+        this.emit(STTEvent.DISCONNECTED)
     }
   }
 }

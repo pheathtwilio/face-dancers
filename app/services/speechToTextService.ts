@@ -42,7 +42,7 @@ const useDeepgramTranscription = (
             smart_format: true,
             interim_results: true,
             utterance_end_ms: 1000,
-            // vad_events: true,
+            vad_events: true,
             endpointing: 300
         })
     

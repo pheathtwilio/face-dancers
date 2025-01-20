@@ -8,14 +8,12 @@ import { Container, Button } from "react-bootstrap"
 import { DeepgramSTTHandler, STTEvent, DeepgramSTTOptions } from "../services/stt"
 import { LLM, LLMEvents } from "../services/llm"
 
-
-const DEEPGRAM_API_KEY = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
-
 export default function VideoRoom() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const username = searchParams.get("username") || "Kwisatz Haderach"
   const roomName = "defaultRoom"
+  const [transcribedText, setTranscribedText] = useState<string | null>(null)
   const [room, setRoom] = useState<Room | null>(null)
 
   let audioDeviceIdRef = useRef<string | null>(null)
@@ -65,14 +63,7 @@ export default function VideoRoom() {
       setRoom(null)
       router.push("/?username="+username)
     }
-  };
-
-  // TODO, in future replace the audioDeviceIdRef.current and subscribe to the local audio track only
-  // const { transcribedText } = useDeepgramTranscription(
-  //   audioDeviceIdRef.current,
-  //   process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY!,
-  //   { diarize: true, model: "nova-2", smart_format: true }
-  // );
+  }
 
   const deepgramAPIKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
 
@@ -84,7 +75,7 @@ export default function VideoRoom() {
       language: "en",
       punctuate: true,
       interimResults: true,
-      timeslice: 250
+      timeslice: 500
     }
   }
   const stt = new DeepgramSTTHandler(sttOptions)
@@ -99,7 +90,15 @@ export default function VideoRoom() {
 
   stt.on(STTEvent.TRANSCRIPT, data => {
     console.log(data) // send to LLM
-    llm.main(data)
+    llm.getCompletion(data)
+  })
+
+  stt.on(STTEvent.DISCONNECTED, () => {
+    stt.disconnect()
+  })
+
+  llm.on(LLMEvents.COMPLETION_RESPONSE, (response) => {
+    setTranscribedText(response)
   })
 
   useEffect(() => {
@@ -130,7 +129,7 @@ export default function VideoRoom() {
       </div>
 
       {/* Display transcribed text */}
-      {/* {transcribedText && <p>{transcribedText}</p>} */}
+      {transcribedText && <p>{transcribedText}</p>}
 
       <Button variant="danger" onClick={leaveRoom}>Leave Room</Button> 
       
