@@ -1,4 +1,3 @@
-import { NextApiRequest, NextApiResponse } from "next"
 import * as Twilio from "twilio"
 
 const { TWILIO_ACCOUNT_SID, TWILIO_API_KEY, TWILIO_API_SECRET } = process.env

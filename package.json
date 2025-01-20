@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@deepgram/sdk": "^3.9.0",
+    "@heygen/streaming-avatar": "^2.0.9",
+    "ahooks": "^3.8.4",
     "bootstrap": "^5.3.3",
     "groq-sdk": "^0.12.0",
+    "lodash": "^4.17.21",
     "next": "15.1.4",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.7",

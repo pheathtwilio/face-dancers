@@ -7,6 +7,7 @@ import { Container, Button } from "react-bootstrap"
 
 import { DeepgramSTTHandler, STTEvent, DeepgramSTTOptions } from "../services/stt"
 import { LLM, LLMEvents } from "../services/llm"
+import InteractiveAvatar from "../avatar/components/avatar"
 
 export default function VideoRoom() {
   const searchParams = useSearchParams()
@@ -78,7 +79,8 @@ export default function VideoRoom() {
       timeslice: 500
     }
   }
-  const stt = new DeepgramSTTHandler(sttOptions)
+
+  const stt = DeepgramSTTHandler.getInstance(sttOptions) // singleton
   if(!audioDeviceIdRef.current) throw new Error("Device ID cannot be undefined")
   stt.connect(audioDeviceIdRef.current)
 
@@ -86,20 +88,45 @@ export default function VideoRoom() {
 
   if(!llmAPIKey) throw new Error("API Key for Grow is undefined")
 
-  const llm = new LLM(llmAPIKey)
+  const llm = LLM.getInstance(llmAPIKey)
 
-  stt.on(STTEvent.TRANSCRIPT, data => {
-    console.log(data) // send to LLM
-    llm.getCompletion(data)
-  })
+  useEffect(() => {
 
-  stt.on(STTEvent.DISCONNECTED, () => {
-    stt.disconnect()
-  })
+    const handleTranscription = (data: string) => {
+      console.log(data)
+      llm.getCompletion(data)
+    }
 
-  llm.on(LLMEvents.COMPLETION_RESPONSE, (response) => {
-    setTranscribedText(response)
-  })
+    stt.on(STTEvent.TRANSCRIPT, handleTranscription)
+
+    const handleDisconnect = () => {
+      stt.disconnect()
+    }
+
+    stt.on(STTEvent.DISCONNECTED, handleDisconnect)
+
+    return () => {
+      stt.off(STTEvent.TRANSCRIPT, handleTranscription)
+      stt.off(STTEvent.DISCONNECTED, handleDisconnect)
+    }
+
+  }, [stt, llm])
+  
+  
+
+
+  // stt.on(STTEvent.TRANSCRIPT, data => {
+  //     console.log(data) // send to LLM
+  //     llm.getCompletion(data)
+  // })
+
+  // stt.on(STTEvent.DISCONNECTED, () => {
+  //   stt.disconnect()
+  // })
+
+  // llm.on(LLMEvents.COMPLETION_RESPONSE, (response) => {
+  //   // setTranscribedText(response)
+  // })
 
   useEffect(() => {
     joinRoom();
@@ -115,7 +142,9 @@ export default function VideoRoom() {
     <Container className="mt-4">
       <h1>Welcome to the Room: {roomName}</h1>
 
-      <div id="video-container">
+      <InteractiveAvatar/>
+
+      {/* <div id="video-container">
         {room?.participants.size ? (
           Array.from(room.participants).map(([sid, participant]) => (
             <div key={sid}>
@@ -126,10 +155,10 @@ export default function VideoRoom() {
         ) : (
           <p>No other participants yet.</p>
         )}
-      </div>
+      </div> */}
 
       {/* Display transcribed text */}
-      {transcribedText && <p>{transcribedText}</p>}
+      {/* {transcribedText && <p>{transcribedText}</p>} */}
 
       <Button variant="danger" onClick={leaveRoom}>Leave Room</Button> 
       
