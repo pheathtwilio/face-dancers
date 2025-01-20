@@ -198,6 +198,9 @@ const InteractiveAvatar = () => {
     // }, [text, previousText])
 
     useEffect(() => {
+
+        startSession()
+
         return () => {
             endSession()
         }
@@ -238,14 +241,6 @@ const InteractiveAvatar = () => {
                       End session
                     </Button>
                   </div>
-                </div>
-              ) : !isLoadingSession ? (
-                <div>
-                  <Button
-                    onClick={startSession}
-                  >
-                    Start session
-                  </Button>
                 </div>
               ) : (
                 <Spinner color="default" />
