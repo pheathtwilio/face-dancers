@@ -1,26 +1,26 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Button, Form, Container, Row, Col } from "react-bootstrap";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react"
+import { Button, Form, Container, Row, Col } from "react-bootstrap"
+import { useSearchParams, useRouter } from "next/navigation"
 
 export default function WaitingRoom() {
-  const [username, setUsername] = useState("");
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState("");
-  const [selectedVideoDevice, setSelectedVideoDevice] = useState("");
+  const [username, setUsername] = useState("")
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState("")
+  const [selectedVideoDevice, setSelectedVideoDevice] = useState("")
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const urlUsername = searchParams.get("username");
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const urlUsername = searchParams.get("username")
 
   // Set username from the URL when the component mounts
   useEffect(() => {
     if (urlUsername) {
-      setUsername(urlUsername);
+      setUsername(urlUsername)
     }
-  }, [urlUsername]);
+  }, [urlUsername])
 
   // Get media devices when the component mounts
   useEffect(() => {
@@ -37,32 +37,32 @@ export default function WaitingRoom() {
           })
 
         // List available devices
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        setAudioDevices(devices.filter((device) => device.kind === "audioinput"));
-        setVideoDevices(devices.filter((device) => device.kind === "videoinput"));
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        setAudioDevices(devices.filter((device) => device.kind === "audioinput"))
+        setVideoDevices(devices.filter((device) => device.kind === "videoinput"))
       } catch (err) {
-        console.error("Error accessing media devices:", err);
+        console.error("Error accessing media devices:", err)
       }
-    };
+    }
 
-    fetchDevices();
-  }, []);
+    fetchDevices()
+  }, [])
 
   const handleJoinRoom = () => {
-    console.log("Joining room with preferences:");
+    console.log("Joining room with preferences:")
     console.log({
       username,
       audioDeviceId: selectedAudioDevice,
       videoDeviceId: selectedVideoDevice,
-    });
+    })
 
     // Navigate to the video room page with parameters
     router.push(
       `/video-room?username=${encodeURIComponent(username)}&audioDeviceId=${encodeURIComponent(
         selectedAudioDevice
       )}&videoDeviceId=${encodeURIComponent(selectedVideoDevice)}`
-    );
-  };
+    )
+  }
 
   return (
     <Container className="mt-5">
@@ -123,5 +123,5 @@ export default function WaitingRoom() {
         </Col>
       </Row>
     </Container>
-  );
+  )
 }

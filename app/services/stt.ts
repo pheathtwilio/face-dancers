@@ -99,6 +99,10 @@ public async connect(audioDeviceId: string): Promise<void> {
                       console.log(STTEvent.SENDING)
                       this.connection?.send(e.data)
                   }   
+
+                  this.audioRecorder.onstop = () => {
+                    this.audioRecorder?.stop()
+                  }
               }
   
           })
@@ -145,10 +149,14 @@ public async connect(audioDeviceId: string): Promise<void> {
    * Disconnects the WebSocket connection.
    */
   public disconnect(): void {
-    if (this.connection) {
+    if(this.connection) {
         this.connection.disconnect()
         this.connection = undefined
+        console.log(STTEvent.DISCONNECTED)
         this.emit(STTEvent.DISCONNECTED)
+    }
+    if(this.audioRecorder){
+      this.audioRecorder.stop()
     }
   }
 }

@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { connect, Room, createLocalTracks } from "twilio-video"
+import { connect, Room, createLocalTracks, LocalVideoTrack } from "twilio-video"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Container, Button } from "react-bootstrap"
+import { Container, Button, Row, Col } from "react-bootstrap"
 
 import { DeepgramSTTHandler, STTEvent, DeepgramSTTOptions } from "../services/stt"
 import { LLM, LLMEvents } from "../services/llm"
@@ -14,30 +14,47 @@ export default function VideoRoom() {
   const router = useRouter()
   const username = searchParams.get("username") || "Kwisatz Haderach"
   const roomName = "defaultRoom"
-  const [transcribedText, setTranscribedText] = useState<string | null>(null)
   const [room, setRoom] = useState<Room | null>(null)
+  const [localVideoTrack, setLocalVideoTrack] = useState<LocalVideoTrack | null>(null)
+  const [transcribedText, setTranscribedText] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  let audioDeviceIdRef = useRef<string | null>(null)
-  let videoDeviceIdRef = useRef<string | null>(null)
+  const deepgramAPIKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
+  const llmAPIKey = process.env.NEXT_PUBLIC_GROQ_API_KEY
 
-  audioDeviceIdRef.current = searchParams.get("audioDeviceId")
-  videoDeviceIdRef.current = searchParams.get("videoDeviceId")
+  if (!deepgramAPIKey) throw new Error("API Key for Deepgram is undefined")
+  if (!llmAPIKey) throw new Error("API Key for LLM is undefined")
+
+  const sttOptions: DeepgramSTTOptions = {
+    apiKey: deepgramAPIKey,
+    config: {
+      language: "en",
+      punctuate: true,
+      interimResults: true,
+      timeslice: 500,
+    },
+  }
+
+  const stt = DeepgramSTTHandler.getInstance(sttOptions)
+  const llm = LLM.getInstance(llmAPIKey)
 
   const joinRoom = async () => {
     try {
-      if (!audioDeviceIdRef.current && !videoDeviceIdRef.current) {
-        throw new Error(`Video Device is ${videoDeviceIdRef.current} and Audio Device is ${audioDeviceIdRef.current}`)
-      }
 
-      const tracks = await createLocalTracks({ 
-        audio: { deviceId: audioDeviceIdRef.current || undefined },
-        video: { deviceId: videoDeviceIdRef.current || undefined }
+      let audioDeviceIdRef = searchParams.get("audioDeviceId")
+      if(!audioDeviceIdRef) throw new Error("Audio Device ID cannot be undefined")
+      let videoDeviceIdRef = searchParams.get("videoDeviceId")
+      if(!videoDeviceIdRef) throw new Error("Video Device ID cannot be undefined")
+
+      const tracks = await createLocalTracks({
+        audio: { deviceId: searchParams.get("audioDeviceId") || undefined },
+        video: { deviceId: searchParams.get("videoDeviceId") || undefined },
       })
 
       const response = await fetch("/api/twilio-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username, roomName: roomName }),
+        body: JSON.stringify({ username, roomName }),
       })
 
       if (!response.ok) {
@@ -46,15 +63,15 @@ export default function VideoRoom() {
 
       const wallet = await response.json()
 
-      // Connect to Twilio Video Room
       const twilioRoom = await connect(wallet.token, {
         name: roomName,
-        tracks: tracks,
+        tracks,
       })
 
       setRoom(twilioRoom)
+      setLocalVideoTrack(null) // Remove the preview video once joined
     } catch (err) {
-      console.error("Failed to connect to Twilio Video:", err)
+      console.error("Failed to join the room:", err)
     }
   }
 
@@ -64,93 +81,83 @@ export default function VideoRoom() {
       setRoom(null)
     }
 
-    if(stt){
-      stt.disconnect()
-    }
-
-    router.push("/?username="+username)
+    stt.disconnect() // Disconnect STT when leaving
+    router.push(`/?username=${username}`)
   }
 
-  const deepgramAPIKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
-
-  if(!deepgramAPIKey) throw new Error("API Key for Deepgram is undefined")
-
-  const sttOptions: DeepgramSTTOptions = {
-    apiKey: deepgramAPIKey,
-    config: {
-      language: "en",
-      punctuate: true,
-      interimResults: true,
-      timeslice: 500
-    }
-  }
-
-  const stt = DeepgramSTTHandler.getInstance(sttOptions) // singleton
-  if(!audioDeviceIdRef.current) throw new Error("Device ID cannot be undefined")
-  stt.connect(audioDeviceIdRef.current)
-
-  const llmAPIKey = process.env.NEXT_PUBLIC_GROQ_API_KEY
-
-  if(!llmAPIKey) throw new Error("API Key for Grow is undefined")
-
-  const llm = LLM.getInstance(llmAPIKey)
-
+  // Setup local video preview on page load
   useEffect(() => {
+    const setupPreview = async () => {
+      const videoTrack = await createLocalTracks({ video: true })
+        .then((tracks) => tracks.find((track) => track.kind === "video") as LocalVideoTrack)
 
-    const handleTranscription = (data: string) => {
-      console.log(data)
-      llm.getCompletion(data)
+      setLocalVideoTrack(videoTrack)
+
+      if (videoRef.current && videoTrack) {
+        videoTrack.attach(videoRef.current)
+      }
     }
 
-    stt.on(STTEvent.TRANSCRIPT, handleTranscription)
-
-    const handleDisconnect = () => {
-      stt.disconnect()
-    }
-
-    stt.on(STTEvent.DISCONNECTED, handleDisconnect)
+    setupPreview()
 
     return () => {
-      stt.off(STTEvent.TRANSCRIPT, handleTranscription)
-      stt.off(STTEvent.DISCONNECTED, handleDisconnect)
-    }
-
-  }, [stt, llm])
-  
-  
-
-
-  // stt.on(STTEvent.TRANSCRIPT, data => {
-  //     console.log(data) // send to LLM
-  //     llm.getCompletion(data)
-  // })
-
-  // stt.on(STTEvent.DISCONNECTED, () => {
-  //   stt.disconnect()
-  // })
-
-  // llm.on(LLMEvents.COMPLETION_RESPONSE, (response) => {
-  //   // setTranscribedText(response)
-  // })
-
-  useEffect(() => {
-    joinRoom();
-
-    return () => {
-      if (room) {
-        room.disconnect()
+      if (localVideoTrack) {
+        localVideoTrack.stop()
+        localVideoTrack.detach()
       }
     }
   }, [])
 
+  // Handle STT and LLM event registration
+  useEffect(() => {
+
+    if(!searchParams.get("audioDeviceId")) throw new Error("Audio Device Id cannot be null or undefined")
+    stt.connect(searchParams.get("audioDeviceId") || "")
+
+    const handleTranscription = (data: string) => {
+      console.log("Transcribed Text:", data)
+      llm.getCompletion(data) // Send transcribed text to the language model
+    }
+
+    const handleLLMCompletion = (response: string) => {
+      console.log("LLM Response:", response)
+      setTranscribedText(response) // Update the UI with LLM response if necessary
+    }
+
+    stt.on(STTEvent.TRANSCRIPT, handleTranscription)
+    llm.on(LLMEvents.COMPLETION_RESPONSE, handleLLMCompletion)
+
+    return () => {
+      stt.off(STTEvent.TRANSCRIPT, handleTranscription)
+      llm.off(LLMEvents.COMPLETION_RESPONSE, handleLLMCompletion)
+    }
+  }, [stt, llm])
+
   return (
     <Container className="mt-4">
-      <h1>Welcome to the Room: {roomName}</h1>
-
-      <InteractiveAvatar/>
-
-      <Button variant="danger" onClick={leaveRoom}>Leave Room</Button> 
-      
+      <Row className="text-center">
+        <Col>
+          <h1>{room ? `Welcome to the Room: ${roomName}` : "Join Video Room"}</h1>
+        </Col>
+      </Row>
+      <Row className="justify-content-center mt-4">
+        {room ? (
+          <Col xs={12} md={8} className="text-center">
+            <InteractiveAvatar />
+            <p>{transcribedText}</p>
+            <Button variant="danger" className="mt-3" onClick={leaveRoom}>
+              Leave Room
+            </Button>
+          </Col>
+        ) : (
+          <Col xs={12} md={6} className="text-center">
+            <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", borderRadius: "8px" }} />
+            <Button variant="primary" className="mt-3" onClick={joinRoom}>
+              Join Room
+            </Button>
+          </Col>
+        )}
+      </Row>
     </Container>
   )
 }
