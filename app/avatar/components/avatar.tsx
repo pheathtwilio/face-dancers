@@ -57,7 +57,6 @@ const InteractiveAvatar = () => {
     avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => console.log("Avatar started talking", e))
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => console.log("Avatar stopped talking", e))
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
-      console.log("Stream disconnected")
       endSession()
     })
     avatar.current?.on(StreamingEvents.STREAM_READY, (e) => {
