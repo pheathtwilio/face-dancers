@@ -27,7 +27,14 @@ export default function WaitingRoom() {
     const fetchDevices = async () => {
       try {
         // Request permission to access media devices
-        await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        await navigator.mediaDevices.getUserMedia(
+          { audio: {
+              noiseSuppression: true,
+              echoCancellation: true,
+              autoGainControl: true
+          }, 
+            video: true 
+          })
 
         // List available devices
         const devices = await navigator.mediaDevices.enumerateDevices();

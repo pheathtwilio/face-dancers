@@ -62,8 +62,13 @@ export default function VideoRoom() {
     if (room) {
       room.disconnect()
       setRoom(null)
-      router.push("/?username="+username)
     }
+
+    if(stt){
+      stt.disconnect()
+    }
+
+    router.push("/?username="+username)
   }
 
   const deepgramAPIKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY
@@ -143,22 +148,6 @@ export default function VideoRoom() {
       <h1>Welcome to the Room: {roomName}</h1>
 
       <InteractiveAvatar/>
-
-      {/* <div id="video-container">
-        {room?.participants.size ? (
-          Array.from(room.participants).map(([sid, participant]) => (
-            <div key={sid}>
-              <h3>{participant.identity}</h3>
-              <div id={`video-${sid}`}></div>
-            </div>
-          ))
-        ) : (
-          <p>No other participants yet.</p>
-        )}
-      </div> */}
-
-      {/* Display transcribed text */}
-      {/* {transcribedText && <p>{transcribedText}</p>} */}
 
       <Button variant="danger" onClick={leaveRoom}>Leave Room</Button> 
       
