@@ -23,14 +23,13 @@ const InteractiveAvatar = () => {
   const [isLoadingSession, setIsLoadingSession] = useState(false)
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false)
   const [stream, setStream] = useState<MediaStream>()
-  const [debug, setDebug] = useState<string>()
   const avatar = useRef<StreamingAvatar | null>(null)
 
   const [data, setData] = useState<any>()
   const [text, setText] = useState<string>("")
   const mediaStream = useRef<HTMLVideoElement>(null)
   const [isUserTalking, setIsUserTalking] = useState(false)
-  const [avatarId, setAvatarId] = useState<string>(AVATARS[1].avatar_id)
+  const [avatarId, setAvatarId] = useState<string>(AVATARS[3].avatar_id)
   const [language, setLanguage] = useState<string>('en')
 
   const pathname = usePathname() // Get current path
@@ -110,13 +109,13 @@ const InteractiveAvatar = () => {
   const handleSpeak = async (text: string) => {
     setIsLoadingRepeat(true)
     if (!avatar.current) {
-      setDebug("Avatar API not initialized")
+      console.log("Avatar API not initialized")
       return
     }
 
     // Interrupt if speaking
-    await avatar.current.interrupt().catch((e) => setDebug(e.message))
-    await avatar.current.speak({ text: text, taskType: TaskType.REPEAT, taskMode: TaskMode.SYNC }).catch((e) => setDebug(e.message))
+    await avatar.current.interrupt().catch((e) => console.log(e.message))
+    await avatar.current.speak({ text: text, taskType: TaskType.REPEAT, taskMode: TaskMode.SYNC }).catch((e) => console.log(e.message))
     setIsLoadingRepeat(false)
   }
 
@@ -151,7 +150,6 @@ const InteractiveAvatar = () => {
       mediaStream.current.srcObject = stream
       mediaStream.current.onloadedmetadata = () => {
         mediaStream.current!.play()
-        setDebug("Playing")
       }
     }
   }, [stream])
