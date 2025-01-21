@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation" // Use from next/navigation for App Router
-import { Button, Card, CardBody, Spinner } from "react-bootstrap"
+import { Card, CardBody, Spinner } from "react-bootstrap"
 import { LLM, LLMEvents } from "@/app/services/llm"
 import StreamingAvatar, {
   AvatarQuality,
