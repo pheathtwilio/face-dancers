@@ -142,7 +142,7 @@ export default function VideoRoom() {
         {room ? (
           <Col xs={12} md={8} className="text-center">
             <InteractiveAvatar />
-            <p>{transcribedText}</p>
+            {/* <p>{transcribedText}</p> */}
             <Button variant="danger" className="mt-3" onClick={leaveRoom}>
               Leave Room
             </Button>

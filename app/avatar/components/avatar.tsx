@@ -16,7 +16,8 @@ const AVATARS = [
   { avatar_id: "Tyler-incasualsuit-20220721", name: "Tyler in Casual Suit" },
   { avatar_id: "Anna_public_3_20240108", name: "Anna in Brown T-shirt" },
   { avatar_id: "Susan_public_2_20240328", name: "Susan in Black Shirt" },
-  { avatar_id: "josh_lite3_20230714", name: "Joshua Heygen CEO" }
+  { avatar_id: "josh_lite3_20230714", name: "Joshua Heygen CEO" },
+  { avatar_id: "37f4d912aa564663a1cf8d63acd0e1ab", name: "Sofia"}
 ]
 
 const InteractiveAvatar = () => {
@@ -29,7 +30,7 @@ const InteractiveAvatar = () => {
   const [text, setText] = useState<string>("")
   const mediaStream = useRef<HTMLVideoElement>(null)
   const [isUserTalking, setIsUserTalking] = useState(false)
-  const [avatarId, setAvatarId] = useState<string>(AVATARS[3].avatar_id)
+  const [avatarId, setAvatarId] = useState<string>(AVATARS[5].avatar_id)
   const [language, setLanguage] = useState<string>('en')
 
   const pathname = usePathname() // Get current path
