@@ -49,12 +49,12 @@ export default function WaitingRoom() {
   }, [])
 
   const handleJoinRoom = () => {
-    console.log("Joining room with preferences:")
-    console.log({
-      username,
-      audioDeviceId: selectedAudioDevice,
-      videoDeviceId: selectedVideoDevice,
-    })
+
+    // console.log({
+    //   username,
+    //   audioDeviceId: selectedAudioDevice,
+    //   videoDeviceId: selectedVideoDevice,
+    // })
 
     // Navigate to the video room page with parameters
     router.push(

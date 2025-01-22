@@ -39,7 +39,6 @@ const InteractiveAvatar = () => {
     try {
       const response = await fetch("/api/avatar-token", { method: "POST" })
       const wallet = await response.json()
-      console.log("Access Token:", wallet.token)
       return wallet.token
     } catch (e) {
       console.error("Error fetching access token:", e)
@@ -54,21 +53,21 @@ const InteractiveAvatar = () => {
     avatar.current = new StreamingAvatar({ token: newToken })
     
     // Register events
-    avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => console.log("Avatar started talking", e))
-    avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => console.log("Avatar stopped talking", e))
+    // avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => console.log("Avatar started talking", e))
+    // avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => console.log("Avatar stopped talking", e))
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       endSession()
     })
     avatar.current?.on(StreamingEvents.STREAM_READY, (e) => {
-      console.log(">>>>> Stream ready:", e.detail)
+      // console.log(">>>>> Stream ready:", e.detail)
       setStream(e.detail)
     })
     avatar.current?.on(StreamingEvents.USER_START, (e) => {
-      console.log(">>>>> User started talking:", e)
+      // console.log(">>>>> User started talking:", e)
       setIsUserTalking(true)
     })
     avatar.current?.on(StreamingEvents.USER_STOP, (e) => {
-      console.log(">>>>> User stopped talking:", e)
+      // console.log(">>>>> User stopped talking:", e)
       setIsUserTalking(false)
     })
 
